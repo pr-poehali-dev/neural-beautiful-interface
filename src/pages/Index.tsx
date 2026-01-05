@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -95,26 +95,32 @@ const Index = () => {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8 bg-card border border-border animate-scale-in">
-            <TabsTrigger value="about" className="data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="Info" size={16} className="mr-2" />О проекте
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="MessageSquare" size={16} className="mr-2" />Чат
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="Image" size={16} className="mr-2" />Галерея
-            </TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="Clock" size={16} className="mr-2" />История
-            </TabsTrigger>
-            <TabsTrigger value="faq" className="data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="HelpCircle" size={16} className="mr-2" />FAQ
-            </TabsTrigger>
-          </TabsList>
+        <div className="w-full">
+          <div className="grid w-full grid-cols-5 mb-8 bg-card border border-border rounded-lg p-1 animate-scale-in">
+            {[
+              { id: 'about', label: 'О проекте', icon: 'Info' },
+              { id: 'chat', label: 'Чат', icon: 'MessageSquare' },
+              { id: 'gallery', label: 'Галерея', icon: 'Image' },
+              { id: 'history', label: 'История', icon: 'Clock' },
+              { id: 'faq', label: 'FAQ', icon: 'HelpCircle' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'gradient-primary text-white shadow-lg'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Icon name={tab.icon as any} size={16} />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-          <TabsContent value="about" className="animate-fade-in">
+          {activeTab === 'about' && (
+            <div className="animate-fade-in">
             <Card className="p-8 bg-card/50 backdrop-blur-sm border-border">
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -162,9 +168,11 @@ const Index = () => {
                 </div>
               </div>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="chat" className="animate-fade-in">
+          {activeTab === 'chat' && (
+            <div className="animate-fade-in">
             <Card className="h-[600px] flex flex-col bg-card/50 backdrop-blur-sm border-border">
               <ScrollArea className="flex-1 p-6">
                 <div className="space-y-4">
@@ -214,9 +222,11 @@ const Index = () => {
                 </div>
               </div>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="gallery" className="animate-fade-in">
+          {activeTab === 'gallery' && (
+            <div className="animate-fade-in">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {gallery.map((image) => (
                 <Card
@@ -243,9 +253,11 @@ const Index = () => {
                 </div>
               </Card>
             </div>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="history" className="animate-fade-in">
+          {activeTab === 'history' && (
+            <div className="animate-fade-in">
             <Card className="p-6 bg-card/50 backdrop-blur-sm border-border">
               <h2 className="text-2xl font-bold mb-6 gradient-text">История взаимодействий</h2>
               <ScrollArea className="h-[500px]">
@@ -275,9 +287,11 @@ const Index = () => {
                 </div>
               </ScrollArea>
             </Card>
-          </TabsContent>
+            </div>
+          )}
 
-          <TabsContent value="faq" className="animate-fade-in">
+          {activeTab === 'faq' && (
+            <div className="animate-fade-in">
             <Card className="p-8 bg-card/50 backdrop-blur-sm border-border">
               <h2 className="text-3xl font-bold mb-6 gradient-text">Часто задаваемые вопросы</h2>
               <Accordion type="single" collapsible className="w-full space-y-4">
@@ -332,13 +346,15 @@ const Index = () => {
                 </AccordionItem>
               </Accordion>
             </Card>
-          </TabsContent>
-        </Tabs>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="fixed bottom-8 right-8 z-50 animate-scale-in">
         <Button
           size="lg"
+          onClick={() => setActiveTab('chat')}
           className="rounded-full gradient-secondary text-white shadow-2xl hover:scale-110 transition-transform glow-hover"
         >
           <Icon name="Sparkles" size={24} className="mr-2" />
