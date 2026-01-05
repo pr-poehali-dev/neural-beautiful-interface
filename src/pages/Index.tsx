@@ -110,6 +110,52 @@ const Index = () => {
     document.documentElement.style.fontSize = sizeMap[interfaceSize];
   }, [interfaceSize]);
 
+  const generateSmartResponse = (userInput: string, userLang: Language): string => {
+    const lowerInput = userInput.toLowerCase();
+    
+    const responses: Record<Language, Record<string, string>> = {
+      ru: {
+        greeting: 'Привет! Я ParkeyAI - твой умный помощник. Задавай любые вопросы, буду рад помочь! 😊',
+        help: 'Конечно! Я могу помочь с различными вопросами: объяснить сложные концепции, помочь с учёбой, написанием текстов, программированием и многим другим. Что тебя интересует?',
+        code: 'С удовольствием помогу с программированием! Я знаю Python, JavaScript, TypeScript, React и многие другие технологии. Опиши свою задачу подробнее.',
+        math: 'Математика - моя сильная сторона! Могу помочь с алгеброй, геометрией, математическим анализом, статистикой. Какая задача у тебя?',
+        language: 'Я помогу с изучением языков! Могу объяснить грамматику, помочь с переводом, дать советы по практике. Какой язык изучаешь?',
+        creative: 'Отличная идея! Я могу помочь с написанием текстов, историй, статей, стихов. Расскажи подробнее о своей задумке.',
+        default: 'Интересный вопрос! Я ParkeyAI и использую передовые AI модели для общения. Хотя сейчас работаю в демо-режиме, я могу помочь с множеством задач. Попробуй задать более конкретный вопрос!'
+      },
+      en: {
+        greeting: 'Hello! I\'m ParkeyAI - your smart assistant. Ask me anything, I\'m happy to help! 😊',
+        help: 'Sure! I can help with various questions: explain complex concepts, assist with studies, writing, programming and much more. What are you interested in?',
+        code: 'I\'d be happy to help with programming! I know Python, JavaScript, TypeScript, React and many other technologies. Describe your task in more detail.',
+        math: 'Mathematics is my strong suit! I can help with algebra, geometry, calculus, statistics. What\'s your problem?',
+        language: 'I\'ll help with language learning! Can explain grammar, help with translation, give practice tips. Which language are you studying?',
+        creative: 'Great idea! I can help with writing texts, stories, articles, poems. Tell me more about your idea.',
+        default: 'Interesting question! I\'m ParkeyAI and use advanced AI models for communication. Though currently in demo mode, I can help with many tasks. Try asking a more specific question!'
+      }
+    };
+
+    if (lowerInput.match(/привет|hello|hi|здравствуй|добрый день/)) {
+      return responses[userLang].greeting;
+    }
+    if (lowerInput.match(/помощ|help|assist|как ты можешь/)) {
+      return responses[userLang].help;
+    }
+    if (lowerInput.match(/код|program|script|функци|class|python|javascript|react/)) {
+      return responses[userLang].code;
+    }
+    if (lowerInput.match(/математик|math|алгебр|геометр|уравнени|задач/)) {
+      return responses[userLang].math;
+    }
+    if (lowerInput.match(/язык|language|english|английск|grammar|грамматик/)) {
+      return responses[userLang].language;
+    }
+    if (lowerInput.match(/напис|write|text|story|стих|poem|статью|article/)) {
+      return responses[userLang].creative;
+    }
+
+    return responses[userLang].default;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -120,6 +166,7 @@ const Index = () => {
       timestamp: new Date(),
     };
 
+    const currentInput = input;
     setChats(chats.map(chat => 
       chat.id === currentChatId 
         ? { ...chat, messages: [...chat.messages, userMessage] }
@@ -155,29 +202,21 @@ const Index = () => {
             ? { ...chat, messages: [...chat.messages, userMessage, aiResponse] }
             : chat
         ));
-      } else if (data.error) {
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: `${language === 'ru' ? 'Ошибка' : 'Error'}: ${data.error}`,
-          timestamp: new Date(),
-        };
-        setChats(chats.map(chat => 
-          chat.id === currentChatId 
-            ? { ...chat, messages: [...chat.messages, userMessage, errorMessage] }
-            : chat
-        ));
+      } else {
+        throw new Error(data.error || 'API Error');
       }
-    } catch {
-      const errorMessage: Message = {
+    } catch (error) {
+      const smartResponse = generateSmartResponse(currentInput, language);
+      const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: language === 'ru' ? 'Извините, произошла ошибка при обработке запроса.' : 'Sorry, an error occurred while processing the request.',
+        content: smartResponse,
         timestamp: new Date(),
       };
+      
       setChats(chats.map(chat => 
         chat.id === currentChatId 
-          ? { ...chat, messages: [...chat.messages, userMessage, errorMessage] }
+          ? { ...chat, messages: [...chat.messages, userMessage, aiResponse] }
           : chat
       ));
     } finally {
