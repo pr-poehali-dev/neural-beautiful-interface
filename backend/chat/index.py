@@ -76,6 +76,7 @@ If you don't know the answer - say so honestly, don't make things up."""
         
         if anthropic_key:
             try:
+                print('Trying Anthropic Claude API...')
                 claude_messages = []
                 for msg in messages:
                     if msg['role'] != 'system':
@@ -100,6 +101,7 @@ If you don't know the answer - say so honestly, don't make things up."""
                     timeout=60
                 )
                 
+                print(f'Anthropic response status: {response.status_code}')
                 if response.status_code == 200:
                     data = response.json()
                     ai_message = data['content'][0]['text']
@@ -108,11 +110,15 @@ If you don't know the answer - say so honestly, don't make things up."""
                         'completion_tokens': data.get('usage', {}).get('output_tokens', 0),
                         'total_tokens': data.get('usage', {}).get('input_tokens', 0) + data.get('usage', {}).get('output_tokens', 0)
                     }
-            except Exception:
-                pass
+                    print('Anthropic Claude API success!')
+                else:
+                    print(f'Anthropic error: {response.text}')
+            except Exception as e:
+                print(f'Anthropic exception: {str(e)}')
         
         if not ai_message and openai_key:
             try:
+                print('Trying OpenAI GPT API...')
                 full_messages = [{'role': 'system', 'content': system_prompt}] + messages
                 
                 response = requests.post(
@@ -130,21 +136,34 @@ If you don't know the answer - say so honestly, don't make things up."""
                     timeout=60
                 )
                 
+                print(f'OpenAI response status: {response.status_code}')
                 if response.status_code == 200:
                     data = response.json()
                     ai_message = data['choices'][0]['message']['content']
                     usage = data.get('usage', {})
-            except Exception:
-                pass
+                    print('OpenAI GPT API success!')
+                else:
+                    print(f'OpenAI error: {response.text}')
+            except Exception as e:
+                print(f'OpenAI exception: {str(e)}')
         
         if not ai_message:
+            error_msg = 'Не удалось получить ответ от AI. '
+            if anthropic_key and not openai_key:
+                error_msg += 'Проверьте ANTHROPIC_API_KEY.'
+            elif openai_key and not anthropic_key:
+                error_msg += 'OpenAI заблокирован в России. Добавьте ANTHROPIC_API_KEY (работает без VPN).'
+            else:
+                error_msg += 'Проверьте оба ключа.'
+            
+            print(f'Error: {error_msg}')
             return {
                 'statusCode': 500,
                 'headers': {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
-                'body': json.dumps({'error': 'Не удалось получить ответ от AI API. Проверьте ключи.'}),
+                'body': json.dumps({'error': error_msg}),
                 'isBase64Encoded': False
             }
         
