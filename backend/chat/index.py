@@ -1,10 +1,11 @@
 import json
 import os
-from openai import OpenAI
+import requests
 
 def handler(event: dict, context) -> dict:
     """
-    AI чат с GPT - отвечает на вопросы пользователя уважительно и грамотно
+    AI чат - работает с Anthropic Claude и OpenAI GPT, автоматически выбирает доступный API
+    Отвечает на любом языке пользователя
     """
     method = event.get('httpMethod', 'POST')
     
@@ -47,39 +48,105 @@ def handler(event: dict, context) -> dict:
                 'isBase64Encoded': False
             }
         
-        api_key = os.environ.get('OPENAI_API_KEY')
-        if not api_key:
+        anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
+        openai_key = os.environ.get('OPENAI_API_KEY')
+        
+        if not anthropic_key and not openai_key:
             return {
                 'statusCode': 500,
                 'headers': {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
-                'body': json.dumps({'error': 'API ключ OpenAI не настроен'}),
+                'body': json.dumps({'error': 'Не настроен ни один AI API ключ (ANTHROPIC_API_KEY или OPENAI_API_KEY)'}),
                 'isBase64Encoded': False
             }
         
-        client = OpenAI(api_key=api_key)
+        system_prompt = """You are a polite and intelligent AI assistant.
+Always respond respectfully, clearly, and helpfully.
+Automatically detect the user's language from their messages and respond in the SAME language.
+If user writes in Russian - respond in Russian.
+If user writes in English - respond in English.
+If user writes in Spanish, French, German, Chinese, Arabic, or any other language - respond in that language.
+Be helpful, friendly, and professional.
+If you don't know the answer - say so honestly, don't make things up."""
         
-        system_prompt = {
-            "role": "system",
-            "content": """Ты вежливый и грамотный AI-ассистент. 
-Всегда отвечай уважительно, по делу и понятно.
-Используй корректный русский язык.
-Будь полезным и дружелюбным, но профессиональным.
-Если не знаешь ответа - так и скажи, не выдумывай."""
-        }
+        ai_message = None
+        usage = {}
         
-        full_messages = [system_prompt] + messages
+        if anthropic_key:
+            try:
+                claude_messages = []
+                for msg in messages:
+                    if msg['role'] != 'system':
+                        claude_messages.append({
+                            'role': msg['role'],
+                            'content': msg['content']
+                        })
+                
+                response = requests.post(
+                    'https://api.anthropic.com/v1/messages',
+                    headers={
+                        'x-api-key': anthropic_key,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    json={
+                        'model': 'claude-3-5-sonnet-20241022',
+                        'max_tokens': 2000,
+                        'system': system_prompt,
+                        'messages': claude_messages
+                    },
+                    timeout=60
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    ai_message = data['content'][0]['text']
+                    usage = {
+                        'prompt_tokens': data.get('usage', {}).get('input_tokens', 0),
+                        'completion_tokens': data.get('usage', {}).get('output_tokens', 0),
+                        'total_tokens': data.get('usage', {}).get('input_tokens', 0) + data.get('usage', {}).get('output_tokens', 0)
+                    }
+            except Exception:
+                pass
         
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=full_messages,
-            temperature=0.7,
-            max_tokens=2000
-        )
+        if not ai_message and openai_key:
+            try:
+                full_messages = [{'role': 'system', 'content': system_prompt}] + messages
+                
+                response = requests.post(
+                    'https://api.openai.com/v1/chat/completions',
+                    headers={
+                        'Authorization': f'Bearer {openai_key}',
+                        'Content-Type': 'application/json'
+                    },
+                    json={
+                        'model': 'gpt-4o-mini',
+                        'messages': full_messages,
+                        'temperature': 0.7,
+                        'max_tokens': 2000
+                    },
+                    timeout=60
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    ai_message = data['choices'][0]['message']['content']
+                    usage = data.get('usage', {})
+            except Exception:
+                pass
         
-        ai_message = response.choices[0].message.content
+        if not ai_message:
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Не удалось получить ответ от AI API. Проверьте ключи.'}),
+                'isBase64Encoded': False
+            }
         
         return {
             'statusCode': 200,
@@ -89,11 +156,7 @@ def handler(event: dict, context) -> dict:
             },
             'body': json.dumps({
                 'message': ai_message,
-                'usage': {
-                    'prompt_tokens': response.usage.prompt_tokens,
-                    'completion_tokens': response.usage.completion_tokens,
-                    'total_tokens': response.usage.total_tokens
-                }
+                'usage': usage
             }),
             'isBase64Encoded': False
         }
