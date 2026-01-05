@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "Test chat endpoint with valid message",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "messages": [
+          {
+            "role": "user",
+            "content": "Привет, как дела?"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "message": "string",
+        "usage": {
+          "prompt_tokens": "number",
+          "completion_tokens": "number",
+          "total_tokens": "number"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
