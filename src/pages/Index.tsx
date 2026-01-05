@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { translations, type Language } from '@/i18n/translations';
 
 type Message = {
   id: string;
@@ -65,6 +66,8 @@ const themes: Theme[] = [
   }
 ];
 
+type InterfaceSize = 'auto' | 'compact' | 'normal' | 'large';
+
 const Index = () => {
   const [chats, setChats] = useState<Chat[]>([
     {
@@ -85,7 +88,10 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState('purple-dream');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [language, setLanguage] = useState<Language>('ru');
+  const [interfaceSize, setInterfaceSize] = useState<InterfaceSize>('auto');
 
+  const t = translations[language];
   const currentChat = chats.find(c => c.id === currentChatId) || chats[0];
 
   useEffect(() => {
@@ -96,6 +102,16 @@ const Index = () => {
       document.documentElement.style.setProperty('--accent', selectedTheme.colors.accent);
     }
   }, [theme]);
+
+  useEffect(() => {
+    const sizeMap = {
+      auto: '16px',
+      compact: '14px',
+      normal: '16px',
+      large: '18px'
+    };
+    document.documentElement.style.fontSize = sizeMap[interfaceSize];
+  }, [interfaceSize]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -146,7 +162,7 @@ const Index = () => {
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Ошибка: ${data.error}`,
+          content: `${language === 'ru' ? 'Ошибка' : 'Error'}: ${data.error}`,
           timestamp: new Date(),
         };
         setChats(chats.map(chat => 
@@ -155,11 +171,11 @@ const Index = () => {
             : chat
         ));
       }
-    } catch (error) {
+    } catch {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Извините, произошла ошибка при обработке запроса.',
+        content: language === 'ru' ? 'Извините, произошла ошибка при обработке запроса.' : 'Sorry, an error occurred while processing the request.',
         timestamp: new Date(),
       };
       setChats(chats.map(chat => 
@@ -175,11 +191,11 @@ const Index = () => {
   const createNewChat = () => {
     const newChat: Chat = {
       id: Date.now().toString(),
-      title: `Чат ${chats.length + 1}`,
+      title: `${t.chat} ${chats.length + 1}`,
       messages: [{
         id: Date.now().toString(),
         role: 'assistant',
-        content: 'Здравствуйте! Чем могу помочь?',
+        content: language === 'ru' ? 'Здравствуйте! Чем могу помочь?' : 'Hello! How can I help you?',
         timestamp: new Date(),
       }],
       createdAt: new Date(),
@@ -200,33 +216,34 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50 animate-fade-in">
+    <div className="min-h-screen bg-background transition-all duration-300">
+      <nav className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50 animate-slide-down">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden">
+                  <Button variant="ghost" size="icon" className="md:hidden hover:scale-110 transition-transform">
                     <Icon name="Menu" size={20} />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-80 p-0">
+                <SheetContent side="left" className="w-80 p-0 animate-slide-up">
                   <div className="h-full flex flex-col bg-card">
                     <div className="p-4 border-b border-border">
-                      <Button onClick={createNewChat} className="w-full gradient-primary text-white">
+                      <Button onClick={createNewChat} className="w-full gradient-primary text-white hover:scale-105 transition-transform">
                         <Icon name="Plus" size={20} className="mr-2" />
-                        Новый чат
+                        {t.newChat}
                       </Button>
                     </div>
                     <ScrollArea className="flex-1 p-4">
                       <div className="space-y-2">
-                        {chats.map(chat => (
+                        {chats.map((chat, index) => (
                           <div
                             key={chat.id}
-                            className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                            style={{ animationDelay: `${index * 0.05}s` }}
+                            className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-300 hover:scale-102 animate-fade-in ${
                               chat.id === currentChatId
-                                ? 'bg-primary/20 border border-primary/50'
+                                ? 'bg-primary/20 border border-primary/50 glow'
                                 : 'hover:bg-muted/50'
                             }`}
                             onClick={() => {
@@ -238,14 +255,14 @@ const Index = () => {
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{chat.title}</p>
                               <p className="text-xs text-muted-foreground">
-                                {chat.messages.length} сообщений
+                                {chat.messages.length} {t.messages}
                               </p>
                             </div>
                             {chats.length > 1 && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="opacity-0 group-hover:opacity-100 transition-all hover:text-destructive hover:scale-110"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   deleteChat(chat.id);
@@ -262,16 +279,16 @@ const Index = () => {
                 </SheetContent>
               </Sheet>
               
-              <div className="w-10 h-10 rounded-xl gradient-primary animate-pulse-glow flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl gradient-primary animate-pulse-glow flex items-center justify-center animate-float">
                 <Icon name="Sparkles" size={24} className="text-white" />
               </div>
-              <h1 className="text-2xl font-bold gradient-text">AI Studio</h1>
+              <h1 className="text-2xl font-bold gradient-text">{t.aiStudio}</h1>
             </div>
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-primary/20 transition-colors"
+                className="hover:bg-primary/20 transition-all hover:scale-110"
                 onClick={() => setActiveTab('settings')}
               >
                 <Icon name="Settings" size={20} />
@@ -281,20 +298,21 @@ const Index = () => {
         </div>
       </nav>
 
-      <div className="hidden md:block fixed left-0 top-16 bottom-0 w-64 border-r border-border bg-card/50 backdrop-blur-sm">
+      <div className="hidden md:block fixed left-0 top-16 bottom-0 w-64 border-r border-border bg-card/50 backdrop-blur-sm animate-slide-up">
         <div className="h-full flex flex-col p-4">
-          <Button onClick={createNewChat} className="w-full gradient-primary text-white mb-4">
+          <Button onClick={createNewChat} className="w-full gradient-primary text-white mb-4 hover:scale-105 transition-transform glow-hover">
             <Icon name="Plus" size={20} className="mr-2" />
-            Новый чат
+            {t.newChat}
           </Button>
           <ScrollArea className="flex-1">
             <div className="space-y-2">
-              {chats.map(chat => (
+              {chats.map((chat, index) => (
                 <div
                   key={chat.id}
-                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-300 hover:scale-102 animate-fade-in ${
                     chat.id === currentChatId
-                      ? 'bg-primary/20 border border-primary/50'
+                      ? 'bg-primary/20 border border-primary/50 glow'
                       : 'hover:bg-muted/50'
                   }`}
                   onClick={() => {
@@ -305,14 +323,14 @@ const Index = () => {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{chat.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {chat.messages.length} сообщений
+                      {chat.messages.length} {t.messages}
                     </p>
                   </div>
                   {chats.length > 1 && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 transition-all hover:text-destructive hover:scale-110"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteChat(chat.id);
@@ -332,18 +350,18 @@ const Index = () => {
         <div className="w-full">
           <div className="grid w-full grid-cols-3 sm:grid-cols-5 mb-8 bg-card border border-border rounded-lg p-1 animate-scale-in">
             {[
-              { id: 'about', label: 'О проекте', icon: 'Info' },
-              { id: 'chat', label: 'Чат', icon: 'MessageSquare' },
-              { id: 'history', label: 'История', icon: 'Clock' },
-              { id: 'faq', label: 'FAQ', icon: 'HelpCircle' },
-              { id: 'settings', label: 'Настройки', icon: 'Settings' },
+              { id: 'about', label: t.about, icon: 'Info' },
+              { id: 'chat', label: t.chat, icon: 'MessageSquare' },
+              { id: 'history', label: t.history, icon: 'Clock' },
+              { id: 'faq', label: t.faq, icon: 'HelpCircle' },
+              { id: 'settings', label: t.settings, icon: 'Settings' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-all ${
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-all duration-300 hover:scale-105 ${
                   activeTab === tab.id
-                    ? 'gradient-primary text-white shadow-lg'
+                    ? 'gradient-primary text-white shadow-lg glow'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
               >
@@ -355,50 +373,31 @@ const Index = () => {
 
           {activeTab === 'about' && (
             <div className="animate-fade-in">
-              <Card className="p-8 bg-card/50 backdrop-blur-sm border-border">
+              <Card className="p-8 bg-card/50 backdrop-blur-sm border-border hover:glow transition-all duration-500">
                 <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl gradient-secondary animate-pulse-glow flex items-center justify-center">
+                  <div className="flex items-center gap-4 animate-slide-up">
+                    <div className="w-16 h-16 rounded-2xl gradient-secondary animate-pulse-glow flex items-center justify-center animate-float">
                       <Icon name="Sparkles" size={32} className="text-white" />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-bold gradient-text">AI Studio</h2>
-                      <p className="text-muted-foreground">Современная платформа для работы с AI</p>
+                      <h2 className="text-3xl font-bold gradient-text">{t.aiStudio}</h2>
+                      <p className="text-muted-foreground">{t.modernPlatform}</p>
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6 mt-8">
-                    <Card className="p-6 bg-muted/50 border-primary/20 hover:border-primary/50 transition-all hover:glow">
-                      <Icon name="MessageSquare" size={32} className="text-primary mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">Умные ответы</h3>
-                      <p className="text-muted-foreground">
-                        Интеграция с GPT для интеллектуальных ответов на любые вопросы
-                      </p>
-                    </Card>
-
-                    <Card className="p-6 bg-muted/50 border-secondary/20 hover:border-secondary/50 transition-all hover:glow">
-                      <Icon name="Layers" size={32} className="text-secondary mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">Множество чатов</h3>
-                      <p className="text-muted-foreground">
-                        Создавайте неограниченное количество чатов для разных задач
-                      </p>
-                    </Card>
-
-                    <Card className="p-6 bg-muted/50 border-accent/20 hover:border-accent/50 transition-all hover:glow">
-                      <Icon name="Palette" size={32} className="text-accent mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">Персонализация</h3>
-                      <p className="text-muted-foreground">
-                        6 уникальных тем оформления на ваш вкус
-                      </p>
-                    </Card>
-
-                    <Card className="p-6 bg-muted/50 border-primary/20 hover:border-primary/50 transition-all hover:glow">
-                      <Icon name="Shield" size={32} className="text-primary mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">Безопасность</h3>
-                      <p className="text-muted-foreground">
-                        Защита данных и конфиденциальность на высшем уровне
-                      </p>
-                    </Card>
+                    {[
+                      { icon: 'MessageSquare', color: 'primary', title: t.smartAnswers, desc: t.smartAnswersDesc },
+                      { icon: 'Layers', color: 'secondary', title: t.multipleChats, desc: t.multipleChatsDesc },
+                      { icon: 'Palette', color: 'accent', title: t.personalization, desc: t.personalizationDesc },
+                      { icon: 'Shield', color: 'primary', title: t.security, desc: t.securityDesc }
+                    ].map((item, index) => (
+                      <Card key={index} style={{ animationDelay: `${index * 0.1}s` }} className={`p-6 bg-muted/50 border-${item.color}/20 hover:border-${item.color}/50 transition-all duration-300 hover:scale-105 hover:glow animate-scale-in`}>
+                        <Icon name={item.icon as any} size={32} className={`text-${item.color} mb-4 animate-bounce-soft`} />
+                        <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                        <p className="text-muted-foreground">{item.desc}</p>
+                      </Card>
+                    ))}
                   </div>
                 </div>
               </Card>
@@ -406,26 +405,27 @@ const Index = () => {
           )}
 
           {activeTab === 'chat' && (
-            <div className="animate-fade-in">
-              <Card className="h-[600px] flex flex-col bg-card/50 backdrop-blur-sm border-border">
-                <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="animate-scale-in">
+              <Card className="h-[600px] flex flex-col bg-card/50 backdrop-blur-sm border-border transition-all duration-300 hover:glow">
+                <div className="p-4 border-b border-border flex items-center justify-between animate-slide-down">
                   <h3 className="font-semibold">{currentChat.title}</h3>
                   <span className="text-xs text-muted-foreground">
-                    {currentChat.messages.length} сообщений
+                    {currentChat.messages.length} {t.messages}
                   </span>
                 </div>
                 <ScrollArea className="flex-1 p-6">
                   <div className="space-y-4">
-                    {currentChat.messages.map((message) => (
+                    {currentChat.messages.map((message, index) => (
                       <div
                         key={message.id}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-scale-in`}
+                        style={{ animationDelay: `${index * 0.05}s` }}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}
                       >
                         <div
-                          className={`max-w-[80%] rounded-2xl p-4 ${
+                          className={`max-w-[80%] rounded-2xl p-4 transition-all duration-300 hover:scale-102 ${
                             message.role === 'user'
-                              ? 'gradient-primary text-white'
-                              : 'bg-muted text-foreground'
+                              ? 'gradient-primary text-white glow-hover'
+                              : 'bg-muted text-foreground hover:bg-muted/80'
                           }`}
                         >
                           <p className="whitespace-pre-wrap">{message.content}</p>
@@ -449,7 +449,7 @@ const Index = () => {
                   </div>
                 </ScrollArea>
 
-                <div className="p-6 border-t border-border">
+                <div className="p-6 border-t border-border animate-slide-up">
                   <div className="flex gap-3">
                     <Textarea
                       value={input}
@@ -460,15 +460,15 @@ const Index = () => {
                           handleSend();
                         }
                       }}
-                      placeholder="Введите сообщение..."
-                      className="resize-none bg-muted/50 border-border focus:border-primary transition-colors"
+                      placeholder={t.placeholder}
+                      className="resize-none bg-muted/50 border-border focus:border-primary transition-all duration-300"
                       rows={3}
                       disabled={isLoading}
                     />
                     <Button
                       onClick={handleSend}
                       disabled={isLoading || !input.trim()}
-                      className="gradient-primary text-white hover:opacity-90 transition-opacity h-auto glow-hover"
+                      className="gradient-primary text-white hover:scale-110 transition-all duration-300 h-auto glow-hover"
                     >
                       <Icon name="Send" size={20} />
                     </Button>
@@ -480,17 +480,17 @@ const Index = () => {
 
           {activeTab === 'history' && (
             <div className="animate-fade-in">
-              <Card className="p-6 bg-card/50 backdrop-blur-sm border-border">
-                <h2 className="text-2xl font-bold mb-6 gradient-text">История всех чатов</h2>
+              <Card className="p-6 bg-card/50 backdrop-blur-sm border-border hover:glow transition-all duration-500">
+                <h2 className="text-2xl font-bold mb-6 gradient-text animate-slide-down">{t.historyAllChats}</h2>
                 <ScrollArea className="h-[500px]">
                   <div className="space-y-6">
-                    {chats.map((chat) => (
-                      <Card key={chat.id} className="p-4 bg-muted/50">
+                    {chats.map((chat, chatIndex) => (
+                      <Card key={chat.id} style={{ animationDelay: `${chatIndex * 0.1}s` }} className="p-4 bg-muted/50 hover:scale-102 transition-all duration-300 animate-scale-in">
                         <h3 className="font-semibold mb-3 gradient-text">{chat.title}</h3>
                         <div className="space-y-3">
-                          {chat.messages.map((message, index) => (
-                            <div key={message.id} className="flex items-start gap-3 animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          {chat.messages.map((message, msgIndex) => (
+                            <div key={message.id} style={{ animationDelay: `${msgIndex * 0.03}s` }} className="flex items-start gap-3 animate-fade-in">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-transform hover:scale-110 ${
                                 message.role === 'user' ? 'gradient-primary' : 'bg-secondary'
                               }`}>
                                 <Icon name={message.role === 'user' ? 'User' : 'Bot'} size={16} className="text-white" />
@@ -498,7 +498,7 @@ const Index = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-medium text-sm">
-                                    {message.role === 'user' ? 'Вы' : 'AI'}
+                                    {message.role === 'user' ? t.you : 'AI'}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
                                     {message.timestamp.toLocaleTimeString()}
@@ -519,48 +519,24 @@ const Index = () => {
 
           {activeTab === 'faq' && (
             <div className="animate-fade-in">
-              <Card className="p-8 bg-card/50 backdrop-blur-sm border-border">
-                <h2 className="text-3xl font-bold mb-6 gradient-text">Часто задаваемые вопросы</h2>
+              <Card className="p-8 bg-card/50 backdrop-blur-sm border-border hover:glow transition-all duration-500">
+                <h2 className="text-3xl font-bold mb-6 gradient-text animate-slide-down">{t.faqTitle}</h2>
                 <Accordion type="single" collapsible className="w-full space-y-4">
-                  <AccordionItem value="item-1" className="bg-muted/50 px-6 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                    <AccordionTrigger className="text-lg font-semibold hover:text-primary">
-                      Как работает AI Studio?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">
-                      AI Studio использует передовые модели GPT-4 для обработки запросов. Все ответы генерируются
-                      в реальном времени с учётом контекста беседы.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-2" className="bg-muted/50 px-6 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                    <AccordionTrigger className="text-lg font-semibold hover:text-primary">
-                      Как создать новый чат?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">
-                      Нажмите кнопку "Новый чат" в боковой панели слева. Каждый чат сохраняется автоматически
-                      и доступен в любое время.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-3" className="bg-muted/50 px-6 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                    <AccordionTrigger className="text-lg font-semibold hover:text-primary">
-                      Как сменить тему оформления?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">
-                      Перейдите в раздел "Настройки" и выберите понравившуюся тему из списка. 
-                      Доступно 6 уникальных вариантов оформления.
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="item-4" className="bg-muted/50 px-6 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                    <AccordionTrigger className="text-lg font-semibold hover:text-primary">
-                      Безопасны ли мои данные?
-                    </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">
-                      Да, все данные надежно защищены. Мы не передаём вашу информацию третьим лицам
-                      и используем современные протоколы шифрования.
-                    </AccordionContent>
-                  </AccordionItem>
+                  {[
+                    { q: t.faqQ1, a: t.faqA1 },
+                    { q: t.faqQ2, a: t.faqA2 },
+                    { q: t.faqQ3, a: t.faqA3 },
+                    { q: t.faqQ4, a: t.faqA4 }
+                  ].map((item, index) => (
+                    <AccordionItem key={index} value={`item-${index}`} style={{ animationDelay: `${index * 0.1}s` }} className="bg-muted/50 px-6 rounded-xl border border-border hover:border-primary/50 transition-all duration-300 hover:scale-102 animate-scale-in">
+                      <AccordionTrigger className="text-lg font-semibold hover:text-primary transition-colors">
+                        {item.q}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-muted-foreground">
+                        {item.a}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
                 </Accordion>
               </Card>
             </div>
@@ -568,15 +544,43 @@ const Index = () => {
 
           {activeTab === 'settings' && (
             <div className="animate-fade-in">
-              <Card className="p-8 bg-card/50 backdrop-blur-sm border-border">
-                <h2 className="text-3xl font-bold mb-6 gradient-text">Настройки</h2>
+              <Card className="p-8 bg-card/50 backdrop-blur-sm border-border hover:glow transition-all duration-500">
+                <h2 className="text-3xl font-bold mb-6 gradient-text animate-slide-down">{t.settingsTitle}</h2>
                 
                 <div className="space-y-6">
-                  <div>
-                    <label className="text-sm font-medium mb-3 block">Тема оформления</label>
+                  <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                    <label className="text-sm font-medium mb-3 block">{t.languageLabel}</label>
+                    <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+                      <SelectTrigger className="w-full transition-all hover:scale-102">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ru">🇷🇺 Русский</SelectItem>
+                        <SelectItem value="en">🇬🇧 English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                    <label className="text-sm font-medium mb-3 block">{t.interfaceSizeLabel}</label>
+                    <Select value={interfaceSize} onValueChange={(v) => setInterfaceSize(v as InterfaceSize)}>
+                      <SelectTrigger className="w-full transition-all hover:scale-102">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">{t.sizeAuto}</SelectItem>
+                        <SelectItem value="compact">{t.sizeCompact}</SelectItem>
+                        <SelectItem value="normal">{t.sizeNormal}</SelectItem>
+                        <SelectItem value="large">{t.sizeLarge}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+                    <label className="text-sm font-medium mb-3 block">{t.themeLabel}</label>
                     <Select value={theme} onValueChange={setTheme}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Выберите тему" />
+                      <SelectTrigger className="w-full transition-all hover:scale-102">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {themes.map((t) => (
@@ -596,30 +600,30 @@ const Index = () => {
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-                    {themes.map((t) => (
+                    {themes.map((t, index) => (
                       <Card
                         key={t.id}
+                        style={{ animationDelay: `${0.4 + index * 0.05}s` }}
                         onClick={() => setTheme(t.id)}
-                        className={`p-4 cursor-pointer transition-all hover:scale-105 ${
-                          theme === t.id ? 'ring-2 ring-primary' : ''
+                        className={`p-4 cursor-pointer transition-all duration-300 hover:scale-110 hover:glow animate-scale-in ${
+                          theme === t.id ? 'ring-2 ring-primary glow' : ''
                         }`}
                       >
                         <div className="flex gap-2 mb-3">
-                          <div className="w-full h-8 rounded" style={{ background: `linear-gradient(135deg, hsl(${t.colors.primary}) 0%, hsl(${t.colors.secondary}) 100%)` }} />
+                          <div className="w-full h-8 rounded animate-gradient" style={{ background: `linear-gradient(135deg, hsl(${t.colors.primary}) 0%, hsl(${t.colors.secondary}) 100%)` }} />
                         </div>
                         <p className="text-sm font-medium text-center">{t.name}</p>
                       </Card>
                     ))}
                   </div>
 
-                  <Card className="p-6 bg-muted/30 mt-8">
+                  <Card className="p-6 bg-muted/30 mt-8 animate-slide-up hover:scale-102 transition-all duration-300" style={{ animationDelay: '0.7s' }}>
                     <div className="flex items-start gap-3">
-                      <Icon name="Info" size={20} className="text-primary mt-1" />
+                      <Icon name="Info" size={20} className="text-primary mt-1 animate-bounce-soft" />
                       <div>
-                        <h3 className="font-semibold mb-2">Дополнительные настройки</h3>
+                        <h3 className="font-semibold mb-2">{t.additionalSettings}</h3>
                         <p className="text-sm text-muted-foreground">
-                          Все ваши чаты сохраняются локально в браузере. Темы применяются мгновенно
-                          и сохраняются между сеансами.
+                          {t.additionalSettingsDesc}
                         </p>
                       </div>
                     </div>
